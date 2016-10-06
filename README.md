@@ -57,6 +57,7 @@ Lambda function should already be deployed. This is resolved by deploying a plac
 then redeploying a properly configured version of it later.
 
 Therefore, the process is as follows:
+
 1. Prepare AWS environment
 1. Build the project
 1. Deploy Lambda function. At this point this is only a placeholder needed to proceed with Alexa Skill set up.
@@ -66,12 +67,13 @@ Therefore, the process is as follows:
 ### 1. Prepare AWS environment
 1. Log in to your [AWS Console](http://console.aws.amazon.com) and switch to the "N. Virginia" region (currently, the only region that supports Alexa Skills Kit on Lambda)
 1. Сreate a new CloudFormation Stack from the template `aws/cloudformation/onebusaway.template`.
-1. Name your stack "onebusaway-alexa" for consistency with existing documentation. Keep parameters to their defaults, since they were already set in the template to the maximum allowable by AWS free tier.
-1. Skip Options page. On Review page under Capabilities section acknowledge "that this template might cause AWS CloudFormation to create IAM resources."
+1. Name your stack "onebusaway-alexa" for consistency with existing documentation.
+1. On Review page under Capabilities section acknowledge "that this template might cause AWS CloudFormation to create IAM resources."
 1. Click "Create" and wait for AWS to complete execution.
-1. Switch to the Output tab of your new stack and note the output parameters. You will need all these are access keys and resource ARNs in the next sections.
+1. Switch to the Output tab of your new stack and note the output parameters. These are AWS access keys and resource ARNs, which you will need in the next sections.
 
 You can examine AWS resources being created in this stack on the Resources tab.
+
 Note that two distinct sets of AWS access credentials are being generated. `{lambdaDeploymentAccessKey}` and `{lambdaDeploymentSecretKey}` are for deploying Lambda functions (access to Lambda and S3),
 whereas `{appExecutionAccessKey}` and `{appExecutionAccessSecret}` are for *running* the application on Lambda (access to DynamoDB).
 
@@ -93,6 +95,7 @@ You can also do this from command line using [AWS CLI](http://aws.amazon.com/cli
             -DlambdaRoleArn={lambdaExecutionRoleARN}
 ```
 ...where `{lambdaDeploymentAccessKey}`, `{lambdaDeploymentSecretKey}`, `{lambdaDeploymentS3Bucket}` and `{lambdaExecutionRoleARN}` are values generated for you by CloudFormation during AWS infrastructure set up.
+
 2. From the [AWS Console > Lambda](https://console.aws.amazon.com/lambda), open the newly created Lambda function and add a _Trigger_ (Event Source) of type `Alexa Skills Kit`.
 1. Note the ARN of the Lambda function at the top right corner of the screen. You will use it to set up a new Alexa Skill in the next section.
 
