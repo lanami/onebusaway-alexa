@@ -50,72 +50,92 @@ Want to make OneBusAway Alexa better?  We welcome collaboration!  See our [Contr
 ## Develop
 The application backing the skill was designed to run in AWS.
 
+The set up process will be a bit circuitous, because, for security reasons, you want Lambda to run your code _only_ if triggered by
+Alexa, rather than some random Internet visitor or script kiddie. To do this, we
+must create a skill first and then supply the unique skill ID to Lambda. But, to create a skill, a backing
+Lambda function should already be deployed. This is resolved by deploying a placeholder Lambda function first, and
+then redeploying a properly configured version of it later.
+
+Therefore, the process is as follows:
+1. Prepare AWS environment
+1. Build the project and deploy Lambda function. At this point this is only placeholder to proceed with Alexa Skill set up.
+1. Register a new Alexa Skill backed by the Lambda function.
+1. Note Alexa Skill ID, supply it to the backing code, rebuild and redeploy to Lambda.
+
 ### Prepare your AWS environment
-1. Log in to your [AWS Console](http://console.aws.amazon.com) and switch to the "N. Virginia" region.
-1. Apply the CloudFormation template in `aws/cloudformation/onebusaway.template` in your AWS account.
-   Name your stack "onebusaway-alexa" for consistency with existing documentation.
-1. Acknowledge "that this template might cause AWS CloudFormation to create IAM resources."
-1. Switch to the Output tab of your stack and note the AWS key ID and secret key.
-   You will use these in the next section.
+1. Log in to your [AWS Console](http://console.aws.amazon.com) and switch to the "N. Virginia" region (currently, the only region that supports Alexa Skills Kit on Lambda)
+1. Сreate a new CloudFormation Stack from the template `aws/cloudformation/onebusaway.template`.
+1. Name your stack "onebusaway-alexa" for consistency with existing documentation. Keep parameters to their defaults, since they were already set in the template to the maximum allowable by AWS free tier.
+1. Skip Options page. On Review page under Capabilities section acknowledge "that this template might cause AWS CloudFormation to create IAM resources."
+1. Click "Create" and wait for AWS to complete execution.
+1. Switch to the Output tab of your new stack and note the output parameters. You will need all these are access keys and resource ARNs in the next sections.
 
-### Personalize the app
-1. Create `src/main/resources/onebusaway.properties` with the following content:
+You can examine AWS resources being created in this stack on the Resources tab.
+Note that two distinct sets of AWS access credentials are being generated. `{lambdaDeploymentAccessKey}` and `{lambdaDeploymentSecretKey}` are for deploying Lambda functions (access to Lambda and S3),
+whereas `{appExecutionAccessKey}` and `{appExecutionAccessSecret}` are for *running* the application on Lambda (access to DynamoDB).
 
-```
-skill-app-id-development=amzn1.echo-sdk-ams.app... //You'll get this when setting up your Skill. See below.
-aws.key-id=...
-aws.secret-key=...
-googlemaps.api-key=...
-onebusaway.api-key=...
-```
+You can also do this from command line using [AWS CLI](http://aws.amazon.com/cli/).
 
-And fill it in with your own values.
-
-### Build the skill
+### Build the project
 1. Install the [Java Platform SE Development Kit (JDK)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) and [Maven](https://maven.apache.org/).
 1. Clone this repository.
 1. Build this project on the command line with `mvn package`.  Look for "BUILD SUCCESS". Resulting JAR is `target/onebusaway-alexa-1.0-jar-with-dependencies.jar`
+
+### Deploy skill backing code to Lambda
 1. Upload to Amazon Lambda with:
-
-        mvn lambduh:deploy-lambda \
-            -DaccessKey={your_key} \
-            -DsecretKey={your_key} \
-            -Ds3Bucket={your_bucket} \
+```
+        mvn lambda:deploy-lambda \
+            -DaccessKey={lambdaDeploymentAccessKey} \
+            -DsecretKey={lambdaDeploymentSecretKey} \
+            -Ds3Bucket={lambdaDeploymentS3Bucket} \
             -Dregion=us-east-1 \
-            -DlambdaRoleArn=arn:aws:iam::{your_arn}:role/lambda_basic_execution
+            -DlambdaRoleArn={lambdaExecutionRoleARN}
+```
+...where `{lambdaDeploymentAccessKey}`, `{lambdaDeploymentSecretKey}`, `{lambdaDeploymentS3Bucket}` and `{lambdaExecutionRoleARN}` are values generated for you by CloudFormation during AWS infrastructure set up.
+2. From the [AWS Console > Lambda](https://console.aws.amazon.com/lambda), open the newly created Lambda function and add a _Trigger_ (Event Source) of type `Alexa Skills Kit`.
+1. Note the ARN of the Lambda function at the top right corner of the screen. You will use it to set up a new Alexa Skill in the next section.
 
-  ...where `{your_key}` is your AWS keys, `{your_bucket}` is your S3 bucket, and `{your_arn}` is your AWS Lambda ARN.
-  Note that the AWS credentials used here are distinct from those you just added
-  to `onebusaway.properties`!  Those are for *running* the application, whereas these
-  are for whichever IAM user you allow to deploy Lambda functions.
-1. From the AWS Console, open your Lambda function and note its ARN.
-   You will use it in the next section.
-1. Add "Alexa Skills Kit" as a new _Event Source_.
+See the [lambda maven plugin homepage](https://github.com/SeanRoy/lambda-maven-plugin) for more information on deploying.
 
-See the [lambduh plugin homepage](https://github.com/SeanRoy/lambduh-maven-plugin) for more information on deploying.
+### Set up Alexa Skill
 
-### Deploy to your Alexa device for the first time
-This will be a bit circuitous, because you want your skill to run only if triggered by
-Alexa, rather than some random Internet visitor or script kiddie.  But to do this, we
-must create the skill first, to get the unique skill ID.  But we cannot get this until
-deploying the skill, which requires your skill to be already running in Lambda.
-That's why we deployed the skill even though it won't work yet.
-
-1. Go to the [Amazon Developer Console](https://developer.amazon.com/edw/home.html)
-1. Add a new skill.  Set _Invocation Name_ to "one bus away".  Plug in your Lambda function's ARN.
-1. Into "Intent Schema" text box, paste the contents of file `interaction model/schema.json`.
-1. Under "Custom Slot Types," click on "Add Slot Type".  Under "Enter type", add `TRANSIT_MODES`.  Under "Enter values", paste the contents of the file `interaction model/customSlotTypes/TRANSIT_MODES`. 
+1. Go to the [Amazon Developer Console > Alexa](http://developer.amazon.com/edw/home.html)
+1. Add a new skill.  Set _Skill Type_ to `Custom Interaction Model`, set _Invocation Name_ to "one bus away". _Name_ can be anything since this is your development version.
+1. Paste the contents of file `interaction model/schema.json` into "Intent Schema" text box.
+1. Under "Custom Slot Types," click on "Add Slot Type".  Under "Enter type", add `TRANSIT_MODES`.  Under "Enter values", paste the contents of the file `interaction model/customSlotTypes/TRANSIT_MODES`.
 1. Under "Custom Slot Types," click on "Add Slot Type".  Under "Enter type", add `AMAZON.US_CITY`.  Under "Enter values", paste the contents of the file `interaction model/customSlotTypes/AMAZON.US_CITY`.
 1. Into "Sample Utterances" text box, paste the contents of file `interaction model/utterances.txt`.
-   Go Next.  That creates the skill.
-1. Switch back to "Skill Information" section, the first section of wizard.
-1. Note the _Application Id_.  Copy that into `src/main/resources/onebusaway.properties`
-   under the `skill-app-id-development=amzn1...` entry.
-1. Now recompile and re-deploy to Lambda!
+1. On Configuration page set up your endpoint by plugging in your Lambda function's ARN.
+   Go Next.  That creates the skill, however it is not functional yet.
+1. At the top of the screen note application _ID_. You will use it to configure Lambda code.
 
-CAUTION: Every time you re-deploy to Lambda using the `lambduh-maven-plugin`, you must
-manually re-add "Alexa Skills Kit" as the function's _Event Source_.  You do not need to
-do this if you deploy your code through the Lambda UI in AWS Console.
+Copy that into `src/main/resources/onebusaway.properties`
+   under the `skill-app-id-development=amzn1...` entry.
+
+### Configure the app
+1. Create `src/main/resources/onebusaway.properties` with the following parameters:
+
+```
+skill-app-id-development=
+aws.key-id=
+aws.secret-key=
+googlemaps.api-key=
+onebusaway.api-key=
+```
+
+Fill in the values:
+- `skill-app-id-development` is Alexa Skill ID from previous step
+- `aws.key-id` and `aws.secret-key` are {appExecutionAccessKey} and {appExecutionSecretKey} respectively generated by Cloud Formation
+- `googlemaps.api-key` Google Maps Geocoding API Key which can be obtained from [Google Developers](https://developers.google.com/maps/get-started/)
+- `onebusaway.api-key` can be obtained from your local OBA region. Typically, you can use `TEST` while you waiting for a key.
+
+### Rebuild the code and redeploy to Lambda
+1. Build this project on the command line with `mvn package`.
+1. Upload to Amazon Lambda as before.
+
+CAUTION: Every time you re-deploy to Lambda using the `lambda-maven-plugin`, you must
+manually re-add "Alexa Skills Kit" as the function's _Trigger_. Support for Event Source configuration is coming.
+For now, you do not need to do this if you deploy your code through the Lambda UI in AWS Console.
 
 ### Testing without an Alexa device
 
