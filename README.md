@@ -52,17 +52,18 @@ The application backing the skill was designed to run in AWS.
 
 The set up process will be a bit circuitous, because, for security reasons, you want Lambda to run your code _only_ if triggered by
 Alexa, rather than some random Internet visitor or script kiddie. To do this, we
-must create a skill first and then supply the unique skill ID to Lambda. But, to create a skill, a backing
+must create a skill first and then supply the unique skill id to Lambda. But, to create a skill, a backing
 Lambda function should already be deployed. This is resolved by deploying a placeholder Lambda function first, and
 then redeploying a properly configured version of it later.
 
 Therefore, the process is as follows:
 1. Prepare AWS environment
-1. Build the project and deploy Lambda function. At this point this is only placeholder to proceed with Alexa Skill set up.
-1. Register a new Alexa Skill backed by the Lambda function.
-1. Note Alexa Skill ID, supply it to the backing code, rebuild and redeploy to Lambda.
+1. Build the project
+1. Deploy Lambda function. At this point this is only a placeholder needed to proceed with Alexa Skill set up.
+1. Set up Alexa Skill backed by the Lambda function.
+1. Note Alexa Skill id, supply it to the Lambda function, rebuild and redeploy.
 
-### Prepare your AWS environment
+### 1. Prepare AWS environment
 1. Log in to your [AWS Console](http://console.aws.amazon.com) and switch to the "N. Virginia" region (currently, the only region that supports Alexa Skills Kit on Lambda)
 1. Сreate a new CloudFormation Stack from the template `aws/cloudformation/onebusaway.template`.
 1. Name your stack "onebusaway-alexa" for consistency with existing documentation. Keep parameters to their defaults, since they were already set in the template to the maximum allowable by AWS free tier.
@@ -76,12 +77,12 @@ whereas `{appExecutionAccessKey}` and `{appExecutionAccessSecret}` are for *runn
 
 You can also do this from command line using [AWS CLI](http://aws.amazon.com/cli/).
 
-### Build the project
+### 2. Build the project
 1. Install the [Java Platform SE Development Kit (JDK)](http://www.oracle.com/technetwork/java/javase/downloads/index.html) and [Maven](https://maven.apache.org/).
 1. Clone this repository.
 1. Build this project on the command line with `mvn package`.  Look for "BUILD SUCCESS". Resulting JAR is `target/onebusaway-alexa-1.0-jar-with-dependencies.jar`
 
-### Deploy skill backing code to Lambda
+### 3. Deploy Lambda function
 1. Upload to Amazon Lambda with:
 ```
         mvn lambda:deploy-lambda \
@@ -97,7 +98,7 @@ You can also do this from command line using [AWS CLI](http://aws.amazon.com/cli
 
 See the [lambda maven plugin homepage](https://github.com/SeanRoy/lambda-maven-plugin) for more information on deploying.
 
-### Set up Alexa Skill
+### 4. Set up Alexa Skill
 
 1. Go to the [Amazon Developer Console > Alexa](http://developer.amazon.com/edw/home.html)
 1. Add a new skill.  Set _Skill Type_ to `Custom Interaction Model`, set _Invocation Name_ to "one bus away". _Name_ can be anything since this is your development version.
@@ -112,7 +113,7 @@ See the [lambda maven plugin homepage](https://github.com/SeanRoy/lambda-maven-p
 Copy that into `src/main/resources/onebusaway.properties`
    under the `skill-app-id-development=amzn1...` entry.
 
-### Configure the app
+### 5. Configure, rebuild and redeploy Lambda function
 1. Create `src/main/resources/onebusaway.properties` with the following parameters:
 
 ```
@@ -129,8 +130,7 @@ Fill in the values:
 - `googlemaps.api-key` Google Maps Geocoding API Key which can be obtained from [Google Developers](https://developers.google.com/maps/get-started/)
 - `onebusaway.api-key` can be obtained from your local OBA region. Typically, you can use `TEST` while you waiting for a key.
 
-### Rebuild the code and redeploy to Lambda
-1. Build this project on the command line with `mvn package`.
+2. Build this project on the command line with `mvn package`.
 1. Upload to Amazon Lambda as before.
 
 CAUTION: Every time you re-deploy to Lambda using the `lambda-maven-plugin`, you must
