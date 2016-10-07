@@ -111,12 +111,7 @@
     },
     "lambdaDeploymentS3Bucket": {
       "Type": "AWS::S3::Bucket",
-      "Properties": {},
-      "Metadata": {
-        "AWS::CloudFormation::Designer": {
-          "id": "cd814202-c7bc-4e8c-8dc0-12c88bcb267c"
-        }
-      }
+      "Properties": {}
     },
     "lambdaDeploymentUser": {
       "Type": "AWS::IAM::User",
